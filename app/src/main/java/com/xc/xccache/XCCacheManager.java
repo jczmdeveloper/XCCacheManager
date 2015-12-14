@@ -48,6 +48,24 @@ public class XCCacheManager {
 
     public void setStrategy(XCCacheManager.Strategy strategy) {
         this.mStrategy = strategy;
+        switch (mStrategy) {
+            case MEMORY_FIRST:
+                if (!mMemoryCache.hasEvictedListener()) {
+                    mMemoryCache.setEvictedListener(new MemoryCache.EvictedListener() {
+                        @Override
+                        public void handleEvictEntry(String evictKey, String evictValue) {
+                            mDiskCache.put(evictKey, evictValue);
+                        }
+                    });
+                }
+                break;
+            case MEMORY_ONLY:
+                if (mMemoryCache.hasEvictedListener())
+                    mMemoryCache.setEvictedListener(null);
+                break;
+            case DISK_ONLY:
+                break;
+        }
     }
 
     public String getCurStrategy() {
@@ -107,19 +125,10 @@ public class XCCacheManager {
             public void run() {
                 switch (mStrategy) {
                     case MEMORY_FIRST:
-                        if (!mMemoryCache.hasEvictedListener()) {
-                            mMemoryCache.setEvictedListener(new MemoryCache.EvictedListener() {
-                                @Override
-                                public void handleEvictEntry(String evictKey, String evictValue) {
-                                    mDiskCache.put(evictKey, evictValue);
-                                }
-                            });
-                        }
                         mMemoryCache.put(key, value);
+                        mDiskCache.put(key,value);
                         break;
                     case MEMORY_ONLY:
-                        if (mMemoryCache.hasEvictedListener())
-                            mMemoryCache.setEvictedListener(null);
                         mMemoryCache.put(key, value);
                         break;
                     case DISK_ONLY:
